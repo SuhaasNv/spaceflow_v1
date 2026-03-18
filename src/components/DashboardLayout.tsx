@@ -121,6 +121,13 @@ const DashboardLayout = () => {
                   </Link>
                 );
               })}
+              <button
+                onClick={() => setDark(!dark)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground w-full"
+              >
+                {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {dark ? "Light mode" : "Dark mode"}
+              </button>
               <Link to="/" className="flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground">
                 <LogOut className="h-5 w-5" /> Log out
               </Link>
