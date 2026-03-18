@@ -284,6 +284,37 @@ spaceflow_v1/
 
 ---
 
+## Roadmap — Future AI Additions
+
+SpaceFlow is built to evolve. Every new AI feature follows the same principles: **advisory, explainable, human-in-the-loop**. Below are planned additions, prioritized by impact and feasibility.
+
+### High Impact
+
+| Feature | USP | Example | Implementation |
+|---------|-----|---------|----------------|
+| **Natural Language Analytics** | Ask in plain English, get charts and tables — no dashboards to learn. | *"Show utilization for Building A last month"* → structured data + AI summary | `POST /api/ai/analytics-query` — maps NL to existing analytics APIs |
+| **Smart Rescheduling** | One click to see the best alternatives. AI ranks by preference, availability, and past behavior. | User clicks "Reschedule" → 3–5 slots with explanations (*"Similar time, same floor"*) | `POST /api/ai/reschedule-suggestions` — bookingId + user history → ranked suggestions |
+| **Natural Language Reports** | Turn data into executive-ready summaries. No analyst needed. | *"Generate a monthly utilization report for leadership"* → PDF or markdown | `POST /api/ai/generate-report` — report type → full analytics → AI-written summary |
+
+### Medium Impact
+
+| Feature | USP | Example | Implementation |
+|---------|-----|---------|----------------|
+| **Personalized Dashboard Insights** | Proactive tips that match how you work. | *"You usually book in the morning. Conference Room 2 is often free 9–10am."* | `GET /api/ai/dashboard-insights` — user history + availability → 1–2 insight strings |
+| **Audit Log Summaries** | Admins see what matters in seconds, not scrolls. | *"Last 7 days: 12 failed logins, 3 new users, 45 bookings. Unusual: User X made 8 calls in 2 min."* | `GET /api/ai/audit-summary` — days → paginated logs → summary + anomaly flags |
+| **Anomaly Detection** | Catch issues before they become problems. | *"User X booked 15 spaces in one day"*, *"Space Y has 0 check-ins but 20 bookings"* | `GET /api/ai/anomalies` or extend Recommendations with "Anomalies" tab |
+| **Proactive No-Show Reminders** | Reduce ghost bookings by nudging users to release unused slots. | 15 min after start, no check-in → *"Release this slot so others can use it?"* | Background job: score no-show likelihood → in-app notification |
+| **AI-Powered Onboarding** | Role-specific walkthroughs that get users productive faster. | *"As an Employee, you can book spaces and check in. Try booking a meeting room for tomorrow."* | `GET /api/ai/onboarding-tips` — role → tips; integrate with Onboarding flow |
+
+### Quick Wins (Low Effort, High UX)
+
+| Feature | USP | Example | Implementation |
+|---------|-----|---------|----------------|
+| **Cancellation Reason Autocomplete** | Less typing, better data. Suggestions based on what others chose. | Focus textarea → *"Meeting moved"*, *"Double-booked"*, *"Meeting cancelled"* | `GET /api/ai/cancellation-suggestions` — cluster existing reasons or AI from sample; cache 1h |
+| **Space Name Suggestion** | Consistent naming without manual rules. | Type=MEETING_ROOM, floor=2, building=North → *"North 2 Meeting Room A"* | `POST /api/ai/space-name-suggestion` or inline in space creation form |
+
+---
+
 ## License
 
 Proprietary. All rights reserved.
