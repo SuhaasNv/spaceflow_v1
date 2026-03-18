@@ -32,19 +32,6 @@ export const CountUp = ({ target, suffix = "", prefix = "" }: CountUpProps) => (
     animate={{ opacity: 1 }}
     transition={{ duration: 0.3 }}
   >
-    <motion.span
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
-      {prefix}
-      <motion.span
-        initial={0}
-        animate={target}
-        transition={{ duration: 1.2, ease: "easeOut" }}
-      >
-        {target}
-      </motion.span>
-      {suffix}
-    </motion.span>
+    {prefix}{target}{suffix}
   </motion.span>
 );
