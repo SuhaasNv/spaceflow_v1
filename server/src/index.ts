@@ -52,15 +52,18 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/ai", aiRoutes);
-app.use("/api/seed", seedRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// 404
-app.use("/api/*", (_req, res) => {
+// Seed endpoint (before 404 so it's matched)
+app.use("/api/seed", seedRoutes);
+
+// 404 — catch unmatched /api routes
+app.use("/api", (req, res, next) => {
+  if (res.headersSent) return next();
   res.status(404).json({ error: "Route not found" });
 });
 

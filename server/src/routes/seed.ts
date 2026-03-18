@@ -13,8 +13,12 @@ const handleSeed = (req: Request, res: Response) => {
   const token = req.query.token as string | undefined;
   const expected = process.env.SEED_TOKEN;
 
-  if (!expected || token !== expected) {
-    res.status(404).json({ error: "Not found" });
+  if (!expected) {
+    res.status(503).json({ error: "Seed not configured", hint: "Add SEED_TOKEN to Railway variables" });
+    return;
+  }
+  if (!token || token !== expected) {
+    res.status(403).json({ error: "Invalid or missing token", hint: "Use ?token=YOUR_SEED_TOKEN" });
     return;
   }
 
