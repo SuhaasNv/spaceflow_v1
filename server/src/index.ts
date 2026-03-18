@@ -20,6 +20,9 @@ const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
 const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
+// Trust Railway's reverse proxy so express-rate-limit and req.ip work correctly
+app.set("trust proxy", 1);
+
 // CORS — must be before other middleware
 // Allow FRONTEND_URL and any *.vercel.app (preview deployments)
 app.use(
