@@ -1,8 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, CalendarPlus, CalendarCheck, BarChart3, Lightbulb, ShieldCheck, LogOut, Menu, X, ChevronLeft
+  LayoutDashboard, CalendarPlus, CalendarCheck, BarChart3, Lightbulb, ShieldCheck, LogOut, Menu, X, ChevronLeft, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +19,11 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+  }, [dark]);
 
   return (
     <div className="min-h-screen flex bg-muted/30">
@@ -63,9 +68,17 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={() => setDark(!dark)}
+            className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full px-3 py-2 rounded-lg hover:bg-muted"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+            {!collapsed && <span>{dark ? "Light mode" : "Dark mode"}</span>}
+          </button>
           <Link to="/">
-            <button className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full">
+            <button className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full px-3 py-2">
               <LogOut className="h-5 w-5 shrink-0" />
               {!collapsed && <span>Log out</span>}
             </button>
@@ -108,6 +121,13 @@ const DashboardLayout = () => {
                   </Link>
                 );
               })}
+              <button
+                onClick={() => setDark(!dark)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground w-full"
+              >
+                {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {dark ? "Light mode" : "Dark mode"}
+              </button>
               <Link to="/" className="flex items-center gap-3 px-3 py-2.5 text-sm text-muted-foreground">
                 <LogOut className="h-5 w-5" /> Log out
               </Link>
