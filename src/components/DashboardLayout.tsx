@@ -68,9 +68,17 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <button
+            onClick={() => setDark(!dark)}
+            className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full px-3 py-2 rounded-lg hover:bg-muted"
+            aria-label="Toggle dark mode"
+          >
+            {dark ? <Sun className="h-5 w-5 shrink-0" /> : <Moon className="h-5 w-5 shrink-0" />}
+            {!collapsed && <span>{dark ? "Light mode" : "Dark mode"}</span>}
+          </button>
           <Link to="/">
-            <button className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full">
+            <button className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors w-full px-3 py-2">
               <LogOut className="h-5 w-5 shrink-0" />
               {!collapsed && <span>Log out</span>}
             </button>
