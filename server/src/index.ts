@@ -11,6 +11,7 @@ import analyticsRoutes from "./routes/analytics.js";
 import adminRoutes from "./routes/admin.js";
 import recommendationsRoutes from "./routes/recommendations.js";
 import aiRoutes from "./routes/ai.js";
+import seedRoutes from "./routes/seed.js";
 
 import { auditLogger } from "./middleware/audit.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -51,6 +52,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/recommendations", recommendationsRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/seed", seedRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

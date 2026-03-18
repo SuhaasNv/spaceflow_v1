@@ -54,14 +54,24 @@ In the backend service → **Variables**, add:
 | `OPENAI_API_KEY` | Your OpenAI API key (fallback for AI features) |
 | `SEED_ADMIN_EMAIL` | (Optional) Admin email for seeding |
 | `SEED_ADMIN_PASSWORD` | (Optional) Admin password for seeding |
+| `SEED_TOKEN` | Random string – used to trigger seed via `/api/seed?token=xxx` |
 
-### Step 5: Get the Backend URL
+### Step 5: Seed the Database (One-Time)
+
+After the first deploy, seed the database with admin, sample users, spaces, and bookings:
+
+1. Add `SEED_TOKEN` to Railway variables (e.g. `fc3b853c2af16efe382d11248025224d`).
+2. Visit: `https://YOUR-RAILWAY-URL/api/seed?token=YOUR_SEED_TOKEN`
+3. You should see `{"ok":true,"message":"Database seeded successfully"}`.
+4. Login with `admin@spaceflow.local` / `Admin@SpaceFlow1!`.
+
+### Step 6: Get the Backend URL
 
 1. Go to the backend service → **Settings** → **Networking**.
 2. Click **Generate Domain** to get a public URL, e.g. `https://spaceflow-server-production-xxxx.up.railway.app`.
 3. Copy this URL – you’ll use it as `VITE_API_URL` for the frontend.
 
-### Step 6: Run Migrations (First Deploy)
+### Step 7: Run Migrations (First Deploy)
 
 On first deploy, run migrations:
 
