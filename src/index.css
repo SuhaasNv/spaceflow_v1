@@ -89,6 +89,10 @@
     --border: 200 18% 18%;
     --input: 200 18% 18%;
     --ring: 172 66% 45%;
+
+    /* Dark-mode gradient overrides (prevent white cards/sections) */
+    --gradient-card: linear-gradient(180deg, hsl(200, 22%, 12%) 0%, hsl(200, 25%, 8%) 100%);
+    --gradient-shimmer: linear-gradient(90deg, hsl(var(--muted)) 0%, hsl(var(--muted-foreground) / 0.08) 50%, hsl(var(--muted)) 100%);
   }
 }
 
@@ -128,9 +132,14 @@
   }
 
   .shimmer {
-    background: hsl(var(--muted));
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.08) 50%,
+      hsl(var(--muted)) 100%
+    );
     background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    animation: shimmer 1.5s infinite linear;
   }
 
   .hover-lift {
@@ -182,4 +191,59 @@
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ── ColorOrb (AI Chat Widget) ───────────────────────────── */
+@property --sf-orb-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.sf-color-orb {
+  display: grid;
+  grid-template-areas: "stack";
+  overflow: hidden;
+  border-radius: 50%;
+  position: relative;
+  transform: scale(1.1);
+}
+
+.sf-color-orb::before,
+.sf-color-orb::after {
+  content: "";
+  display: block;
+  grid-area: stack;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  transform: translateZ(0);
+}
+
+.sf-color-orb::before {
+  background:
+    conic-gradient(from calc(var(--sf-orb-angle) * 2) at 25% 70%, var(--sf-accent1), transparent 20% 80%, var(--sf-accent1)),
+    conic-gradient(from calc(var(--sf-orb-angle) * 2) at 45% 75%, var(--sf-accent2), transparent 30% 60%, var(--sf-accent2)),
+    conic-gradient(from calc(var(--sf-orb-angle) * -3) at 80% 20%, var(--sf-accent3), transparent 40% 60%, var(--sf-accent3)),
+    conic-gradient(from calc(var(--sf-orb-angle) * 2) at 15% 5%, var(--sf-accent2), transparent 10% 90%, var(--sf-accent2)),
+    conic-gradient(from calc(var(--sf-orb-angle) * 1) at 20% 80%, var(--sf-accent1), transparent 10% 90%, var(--sf-accent1)),
+    conic-gradient(from calc(var(--sf-orb-angle) * -2) at 85% 10%, var(--sf-accent3), transparent 20% 80%, var(--sf-accent3));
+  filter: blur(var(--sf-blur)) contrast(var(--sf-contrast));
+  animation: sf-orb-spin var(--sf-spin-dur) linear infinite;
+}
+
+.sf-color-orb::after {
+  backdrop-filter: blur(calc(var(--sf-blur) * 2)) contrast(calc(var(--sf-contrast) * 2));
+  mix-blend-mode: overlay;
+  background-image: radial-gradient(circle at center, var(--sf-base) 0.1px, transparent 0.1px);
+  background-size: 0.2px 0.2px;
+  mask-image: radial-gradient(black 25%, transparent 75%);
+}
+
+@keyframes sf-orb-spin {
+  to { --sf-orb-angle: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-color-orb::before { animation: none; }
 }

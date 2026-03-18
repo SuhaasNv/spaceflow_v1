@@ -1,7 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- Apply theme before first paint to avoid white flash -->
+    <script>
+      (function() {
+        var stored = localStorage.getItem('sf-theme');
+        if (stored === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+    <style>
+      /* Fallback: prevent white flash before CSS loads */
+      html.dark, html.dark body { background-color: #0f1419; color: #e2e8f0; }
+    </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SpaceFlow — Smart Workplace Platform</title>
     <meta name="description" content="Know what's booked vs what's used. SpaceFlow gives SMBs and coworking operators real-time visibility into space utilization." />

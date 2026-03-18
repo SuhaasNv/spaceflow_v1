@@ -90,3 +90,5 @@ export const PublicNav = () => {
     </motion.header>
   );
 };
+
+export default PublicNav;

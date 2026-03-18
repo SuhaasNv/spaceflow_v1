@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FACILITIES_MANAGER
+  EMPLOYEE
+}
+
+enum SpaceType {
+  MEETING_ROOM
+  DESK
+  PHONE_BOOTH
+  COLLABORATION_AREA
+  OFFICE
+}
+
+enum BookingStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum OccupancySource {
+  MANUAL
+  SENSOR
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings         Booking[]
+  occupancyRecords OccupancyRecord[]
+  refreshTokens    RefreshToken[]
+  apiAuditLogs     ApiAuditLog[]
+  aiLogs           AiRecommendationLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Space {
+  id       String    @id @default(uuid())
+  name     String
+  type     SpaceType
+  floor    String?
+  building String?
+  capacity Int       @default(1)
+  metadata Json?
+  isActive Boolean   @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings         Booking[]
+  occupancyRecords OccupancyRecord[]
+
+  @@index([type])
+  @@index([building, floor])
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  spaceId       String
+  userId        String
+  startTime     DateTime
+  endTime       DateTime
+  purpose            String?
+  attendeeCount      Int?
+  status             BookingStatus @default(ACTIVE)
+  cancellationReason String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  space            Space             @relation(fields: [spaceId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+  occupancyRecords OccupancyRecord[]
+
+  @@index([spaceId, startTime, endTime])
+  @@index([userId])
+  @@index([status])
+  @@index([startTime])
+}
+
+model OccupancyRecord {
+  id        String          @id @default(uuid())
+  spaceId   String
+  userId    String
+  bookingId String?
+  checkIn   DateTime
+  checkOut  DateTime?
+  source    OccupancySource @default(MANUAL)
+  createdAt DateTime        @default(now())
+
+  space   Space    @relation(fields: [spaceId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([spaceId, checkIn])
+  @@index([userId])
+  @@index([bookingId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model ApiAuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  method     String
+  path       String
+  statusCode Int
+  ip         String?
+  userAgent  String?
+  durationMs Int?
+  timestamp  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([path])
+}
+
+model AiRecommendationLog {
+  id             String   @id @default(uuid())
+  userId         String
+  scope          String?
+  provider       String?  // "gemini" | "openai" — which LLM handled the call
+  timeRange      String?
+  focus          String?
+  promptTokens   Int?
+  responseTokens Int?
+  latencyMs      Int?
+  success        Boolean  @default(true)
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([provider])
+}
+
+model PlatformConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([key])
+}

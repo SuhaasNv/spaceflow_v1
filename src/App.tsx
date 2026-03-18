@@ -1,9 +1,13 @@
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AnimatePresence } from "framer-motion";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { setNavigateToLogin } from "@/lib/api";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -14,33 +18,104 @@ import MyBookings from "./pages/MyBookings";
 import Utilization from "./pages/Utilization";
 import Recommendations from "./pages/Recommendations";
 import Admin from "./pages/Admin";
+import BookingUsage from "./pages/BookingUsage";
+import Patterns from "./pages/Patterns";
+import Segments from "./pages/Segments";
+import Spaces from "./pages/Spaces";
+import AllBookings from "./pages/AllBookings";
+import CheckIn from "./pages/CheckIn";
+import Settings from "./pages/Settings";
+import AdminConfig from "./pages/AdminConfig";
+import AdminAudit from "./pages/AdminAudit";
+import Pricing from "./pages/Pricing";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
+function AppRoutes() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    setNavigateToLogin(() => () => navigate("/login", { replace: true }));
+  }, [navigate]);
+
+  return (
+    <AnimatePresence mode="sync">
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/onboarding" element={
+          <ProtectedRoute><Onboarding /></ProtectedRoute>
+        } />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="book" element={<BookSpace />} />
+          <Route path="bookings" element={<MyBookings />} />
+          <Route path="utilization" element={
+            <ProtectedRoute adminOrFM><Utilization /></ProtectedRoute>
+          } />
+          <Route path="booking-usage" element={
+            <ProtectedRoute adminOrFM><BookingUsage /></ProtectedRoute>
+          } />
+          <Route path="patterns" element={
+            <ProtectedRoute adminOrFM><Patterns /></ProtectedRoute>
+          } />
+          <Route path="segments" element={
+            <ProtectedRoute adminOrFM><Segments /></ProtectedRoute>
+          } />
+          <Route path="recommendations" element={
+            <ProtectedRoute adminOrFM><Recommendations /></ProtectedRoute>
+          } />
+          <Route path="spaces" element={
+            <ProtectedRoute adminOrFM><Spaces /></ProtectedRoute>
+          } />
+          <Route path="all-bookings" element={
+            <ProtectedRoute adminOrFM><AllBookings /></ProtectedRoute>
+          } />
+          <Route path="admin" element={
+            <ProtectedRoute requiredRole="ADMIN"><Admin /></ProtectedRoute>
+          } />
+          <Route path="admin/config" element={
+            <ProtectedRoute requiredRole="ADMIN"><AdminConfig /></ProtectedRoute>
+          } />
+          <Route path="admin/audit" element={
+            <ProtectedRoute requiredRole="ADMIN"><AdminAudit /></ProtectedRoute>
+          } />
+          <Route path="checkin/:id" element={<CheckIn />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<DashboardHome />} />
-              <Route path="book" element={<BookSpace />} />
-              <Route path="bookings" element={<MyBookings />} />
-              <Route path="utilization" element={<Utilization />} />
-              <Route path="recommendations" element={<Recommendations />} />
-              <Route path="admin" element={<Admin />} />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AnimatePresence>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

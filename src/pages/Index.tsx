@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Eye, Brain, Zap, ArrowRight, BarChart3, Calendar, Users } from "lucide-react";
+import { Eye, Brain, Zap, ArrowRight, BarChart3, Calendar, Users, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicNav } from "@/components/PublicNav";
 import { ScrollReveal } from "@/components/animations";
-import { PageTransition, StaggerContainer, StaggerItem } from "@/components/animations";
+import { PageTransition } from "@/components/animations";
+import { ShuffleCards } from "@/components/ui/testimonial-cards";
+import GlassmorphismHero from "@/components/ui/glassmorphism-hero";
+import { ContainerScroll } from "@/components/ui/container-scroll-animation";
 
 const pillars = [
   {
@@ -24,77 +26,39 @@ const pillars = [
   },
 ];
 
-const stats = [
-  { value: "35%", label: "Average space wasted" },
-  { value: "2.4x", label: "Faster room booking" },
-  { value: "89%", label: "User satisfaction" },
-];
-
 const Index = () => {
   return (
     <PageTransition>
       <PublicNav />
 
       {/* Hero */}
-      <section className="gradient-hero min-h-screen flex items-center relative overflow-hidden">
-        {/* Subtle grid overlay */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: "linear-gradient(hsl(172, 66%, 45%) 1px, transparent 1px), linear-gradient(90deg, hsl(172, 66%, 45%) 1px, transparent 1px)",
-          backgroundSize: "60px 60px"
-        }} />
+      <GlassmorphismHero />
 
-        <div className="container relative z-10 pt-24 pb-20">
-          <StaggerContainer className="max-w-3xl">
-            <StaggerItem>
+      {/* Product Preview — Scroll Animation */}
+      <section className="overflow-hidden bg-background">
+        <ContainerScroll
+          titleComponent={
+            <div className="mb-4">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-6">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-                Smart Workplace Platform
+                Live Dashboard
               </span>
-            </StaggerItem>
-            <StaggerItem>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-primary-foreground leading-[1.1] mb-6">
-                Know what's booked
-                <br />
-                <span className="text-gradient">vs what's used.</span>
-              </h1>
-            </StaggerItem>
-            <StaggerItem>
-              <p className="text-lg sm:text-xl text-primary-foreground/70 max-w-xl mb-10 leading-relaxed">
-                SpaceFlow gives SMBs and coworking operators real-time visibility into space utilization — so you stop guessing and start optimizing.
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold font-display tracking-tight text-foreground">
+                Your workplace, <br />
+                <span className="text-primary">fully in view</span>
+              </h2>
+              <p className="mt-4 text-muted-foreground text-lg max-w-xl mx-auto">
+                See every desk, room, and zone — booked, occupied, or available — in one real-time dashboard.
               </p>
-            </StaggerItem>
-            <StaggerItem>
-              <div className="flex flex-wrap gap-4">
-                <Link to="/signup">
-                  <Button size="lg" className="gradient-primary text-primary-foreground font-semibold text-base px-8 shadow-lg hover:scale-[1.03] transition-transform duration-200">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <a href="#features">
-                  <Button size="lg" variant="outline" className="border-primary-foreground/20 text-primary-foreground/80 hover:bg-primary-foreground/10 font-medium text-base px-8">
-                    See Features
-                  </Button>
-                </a>
-              </div>
-            </StaggerItem>
-          </StaggerContainer>
-
-          {/* Stats row */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
-            className="mt-20 grid grid-cols-3 gap-8 max-w-lg"
-          >
-            {stats.map((stat) => (
-              <div key={stat.label}>
-                <div className="text-2xl sm:text-3xl font-bold text-primary font-display">{stat.value}</div>
-                <div className="text-sm text-primary-foreground/50 mt-1">{stat.label}</div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
+            </div>
+          }
+        >
+          <img
+            src="https://images.unsplash.com/photo-1497366216548-37526070297c?w=1400&q=80&auto=format&fit=crop"
+            alt="SpaceFlow dashboard — modern open-plan office"
+            className="mx-auto rounded-2xl object-cover h-full w-full object-top"
+            draggable={false}
+          />
+        </ContainerScroll>
       </section>
 
       {/* Value Pillars */}
@@ -158,6 +122,55 @@ const Index = () => {
                 </div>
               </ScrollReveal>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-24 overflow-hidden">
+        <div className="container">
+          <ScrollReveal>
+            <div className="text-center mb-16">
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary mb-4">
+                <Quote className="h-3.5 w-3.5" />
+                What customers say
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold font-display tracking-tight mb-4">
+                Real results from real teams
+              </h2>
+              <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                Drag the card to see more — or let them speak for themselves.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
+            {/* Shuffle cards */}
+            <ScrollReveal>
+              <div className="relative h-[420px] w-[560px] flex items-center justify-start pl-4">
+                <ShuffleCards />
+              </div>
+            </ScrollReveal>
+
+            {/* Side stats */}
+            <ScrollReveal delay={0.15}>
+              <div className="flex flex-col gap-8 max-w-xs">
+                {[
+                  { value: "28%", label: "Average no-show reduction", sub: "in the first 30 days" },
+                  { value: "3.1×", label: "More actionable insight", sub: "vs spreadsheets" },
+                  { value: "< 5 min", label: "Setup time", sub: "no sensors required" },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-start gap-4">
+                    <div className="h-1 w-8 rounded-full bg-primary mt-3 shrink-0" />
+                    <div>
+                      <div className="text-3xl font-bold font-display text-primary">{s.value}</div>
+                      <div className="text-sm font-medium mt-0.5">{s.label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{s.sub}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
