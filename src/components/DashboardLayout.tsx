@@ -1,8 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  LayoutDashboard, CalendarPlus, CalendarCheck, BarChart3, Lightbulb, ShieldCheck, LogOut, Menu, X, ChevronLeft
+  LayoutDashboard, CalendarPlus, CalendarCheck, BarChart3, Lightbulb, ShieldCheck, LogOut, Menu, X, ChevronLeft, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
