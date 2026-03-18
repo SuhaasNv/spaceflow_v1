@@ -11,6 +11,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx src/lib/seed.ts",
+    "db:seed:prod": "node dist/lib/seed.js",
     "db:studio": "prisma studio"
   },
   "dependencies": {
