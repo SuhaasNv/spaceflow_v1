@@ -17,12 +17,19 @@ import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 const PORT = Number(process.env.PORT ?? 4000);
-const FRONTEND_URL = process.env.FRONTEND_URL ?? "http://localhost:8080";
+const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 // CORS — must be before other middleware
+// Allow FRONTEND_URL and any *.vercel.app (preview deployments)
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // same-origin or non-browser
+      if (origin === FRONTEND_URL || origin.endsWith(".vercel.app")) {
+        return cb(null, origin);
+      }
+      cb(null, false);
+    },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
