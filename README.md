@@ -1,5 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/SpaceFlow-Smart%20Workspace%20Platform-0d9488?style=for-the-badge" alt="SpaceFlow" />
+  <a href="https://spaceflow-v1.vercel.app/"><img src="https://img.shields.io/badge/Live%20Demo-https%3A%2F%2Fspaceflow--v1.vercel.app-22c55e?style=for-the-badge" alt="Live Demo" /></a>
 </p>
 
 <h1 align="center">SpaceFlow</h1>
@@ -8,6 +9,9 @@
 </p>
 <p align="center">
   AI-powered workspace management for SMBs and coworking operators. No sensors required.
+</p>
+<p align="center">
+  <strong>→ <a href="https://spaceflow-v1.vercel.app/">Live Demo</a></strong>
 </p>
 
 ---
@@ -77,25 +81,57 @@
 
 ## Architecture
 
+### High-Level Overview
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (Vite + React)                   │
-│  Port 8080  │  TypeScript  │  Tailwind  │  shadcn  │  Framer   │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ REST API (credentials: include)
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     BACKEND (Node.js + Express)                   │
-│  Port 4000  │  Prisma ORM  │  JWT Auth  │  Audit  │  Rate Limit │
-└─────────────────────────────────────────────────────────────────┘
-                    │                           │
-                    ▼                           ▼
-┌──────────────────────────┐    ┌──────────────────────────────────┐
-│   PostgreSQL (Docker)    │    │   AI (optional)                   │
-│   Port 5432              │    │   Gemini 2.5 Flash → OpenAI GPT-4o│
-└──────────────────────────┘    └──────────────────────────────────┘
+                                    ┌─────────────────────────────────────┐
+                                    │     LIVE DEMO (Production)           │
+                                    │  https://spaceflow-v1.vercel.app/     │
+                                    └─────────────────────────────────────┘
+                                                      │
+                                                      ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (Vite + React)                                           │
+│  Vercel  │  Port 8080 (dev)  │  TypeScript  │  Tailwind  │  shadcn  │  Framer Motion      │
+│  • Public pages (Index, Login, Signup, Pricing)                                             │
+│  • Dashboard (role-based: Admin, FM, Employee)                                              │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+                                          │
+                                          │ REST API (credentials: include, CORS)
+                                          ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                         BACKEND (Node.js + Express)                                       │
+│  Port 4000  │  Prisma ORM  │  JWT Auth  │  Audit Middleware  │  Rate Limiting             │
+│  • /api/auth, /api/spaces, /api/bookings, /api/occupancy, /api/analytics, /api/ai          │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+                    │                                           │
+                    ▼                                           ▼
+┌──────────────────────────────────┐    ┌──────────────────────────────────────────────────┐
+│   PostgreSQL (Docker / Supabase) │    │   AI (optional)                                   │
+│   Port 5432                      │    │   Gemini 2.5 Flash → OpenAI GPT-4o (fallback)     │
+│   User, Space, Booking, AuditLog │    │   Rule-based fallback if no API keys               │
+└──────────────────────────────────┘    └──────────────────────────────────────────────────┘
 ```
+
+### Deployment Flow
+
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Browser    │────▶│   Vercel     │────▶│   Backend    │────▶│  PostgreSQL  │
+│   (Client)   │     │   (Frontend) │     │   (API)      │     │   (DB)       │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+       │                     │                    │
+       │                     │                    └──────────────────▶ Gemini / OpenAI
+       └────────────────────────────────────────────────────────────────────────────────
+                         JWT in httpOnly cookies | CORS
+```
+
+### Request Flow
+
+1. **Authentication** — Login/Signup → JWT issued, stored in httpOnly cookie.
+2. **API calls** — Frontend sends `credentials: include`; backend validates JWT.
+3. **AI features** — Recommendations, chat, smart booking → backend calls Gemini/OpenAI.
+4. **Audit** — All API calls logged with user, timestamp, action.
 
 ---
 
@@ -195,6 +231,7 @@ spaceflow_v1/
 │   │   ├── ui/                   # shadcn components (50+)
 │   │   │   ├── container-scroll-animation.tsx
 │   │   │   ├── glassmorphism-hero.tsx
+│   │   │   ├── mock-dashboard.tsx   # Landing page dashboard mock
 │   │   │   ├── testimonial-cards.tsx
 │   │   │   └── ...
 │   │   ├── AIChatWidget.tsx      # Floating AI assistant
