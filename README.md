@@ -83,50 +83,96 @@
 
 ### High-Level Overview
 
-```
-                                    ┌─────────────────────────────────────┐
-                                    │     LIVE DEMO (Production)           │
-                                    │  https://spaceflow-v1.vercel.app/     │
-                                    └─────────────────────────────────────┘
-                                                      │
-                                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                         FRONTEND (Vite + React)                                           │
-│  Vercel  │  Port 8080 (dev)  │  TypeScript  │  Tailwind  │  shadcn  │  Framer Motion      │
-│  • Public pages (Index, Login, Signup, Pricing)                                             │
-│  • Dashboard (role-based: Admin, FM, Employee)                                              │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-                                          │
-                                          │ REST API (credentials: include, CORS)
-                                          ▼
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│                         BACKEND (Node.js + Express)                                       │
-│  Port 4000  │  Prisma ORM  │  JWT Auth  │  Audit Middleware  │  Rate Limiting             │
-│  • /api/auth, /api/spaces, /api/bookings, /api/occupancy, /api/analytics, /api/ai          │
-└─────────────────────────────────────────────────────────────────────────────────────────┘
-                    │                                           │
-                    ▼                                           ▼
-┌──────────────────────────────────┐    ┌──────────────────────────────────────────────────┐
-│   PostgreSQL (Docker / Supabase) │    │   AI (optional)                                   │
-│   Port 5432                      │    │   Gemini 2.5 Flash → OpenAI GPT-4o (fallback)     │
-│   User, Space, Booking, AuditLog │    │   Rule-based fallback if no API keys               │
-└──────────────────────────────────┘    └──────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Demo["🌐 Live Demo"]
+        URL["https://spaceflow-v1.vercel.app/"]
+    end
+
+    subgraph Frontend["Frontend (Vite + React)"]
+        F1["Vercel · Port 8080 (dev)"]
+        F2["TypeScript · Tailwind · shadcn · Framer Motion"]
+        F3["Public: Index, Login, Signup, Pricing"]
+        F4["Dashboard: Admin, FM, Employee"]
+    end
+
+    subgraph Backend["Backend (Node.js + Express)"]
+        B1["Port 4000 · Prisma ORM · JWT · Audit · Rate Limit"]
+        B2["/api/auth, spaces, bookings, occupancy"]
+        B3["/api/analytics, recommendations, ai, admin"]
+    end
+
+    subgraph Data["Data & AI"]
+        DB[(PostgreSQL<br/>Docker / Supabase<br/>Port 5432)]
+        AI["AI (optional)<br/>Gemini 2.5 Flash → OpenAI GPT-4o<br/>Rule-based fallback"]
+    end
+
+    Demo --> Frontend
+    Frontend -->|"REST API · credentials: include · CORS"| Backend
+    Backend --> DB
+    Backend --> AI
 ```
 
 ### Deployment Flow
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Browser    │────▶│   Vercel     │────▶│   Backend    │────▶│  PostgreSQL  │
-│   (Client)   │     │   (Frontend) │     │   (API)      │     │   (DB)       │
-└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-       │                     │                    │
-       │                     │                    └──────────────────▶ Gemini / OpenAI
-       └────────────────────────────────────────────────────────────────────────────────
-                         JWT in httpOnly cookies | CORS
+```mermaid
+flowchart LR
+    subgraph Client
+        Browser["Browser (Client)"]
+    end
+
+    subgraph Hosting
+        Vercel["Vercel (Frontend)"]
+        API["Backend (API)"]
+    end
+
+    subgraph Storage
+        PG[(PostgreSQL)]
+    end
+
+    subgraph External
+        LLM["Gemini / OpenAI"]
+    end
+
+    Browser -->|"HTTPS"| Vercel
+    Vercel -->|"REST · JWT in httpOnly cookies"| API
+    API --> PG
+    API --> LLM
 ```
 
 ### Request Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend
+    participant DB as PostgreSQL
+    participant AI as Gemini/OpenAI
+
+    U->>F: Login / Signup
+    F->>B: POST /api/auth/login
+    B->>DB: Validate credentials
+    B-->>F: JWT (httpOnly cookie)
+    F-->>U: Authenticated
+
+    U->>F: API request (e.g. book space)
+    F->>B: Request + credentials: include
+    B->>B: Validate JWT
+    B->>DB: Read/Write
+    B-->>F: Response
+    F-->>U: Updated UI
+
+    U->>F: AI request (recommendations, chat)
+    F->>B: POST /api/ai/*
+    B->>AI: LLM call
+    AI-->>B: Response
+    B->>DB: Log / persist
+    B-->>F: AI response
+    F-->>U: Result
+```
+
+### Request Flow (Summary)
 
 1. **Authentication** — Login/Signup → JWT issued, stored in httpOnly cookie.
 2. **API calls** — Frontend sends `credentials: include`; backend validates JWT.
