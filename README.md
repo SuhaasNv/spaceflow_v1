@@ -258,7 +258,7 @@ npm run dev            # Starts on http://localhost:8080
 | `PORT` | API server port | `4000` |
 | `FRONTEND_URL` | CORS origin | `http://localhost:8080` |
 | `GEMINI_API_KEY` | Google AI API key | *(optional)* |
-| `GEMINI_MODEL` | Gemini model name | `gemini-2.5-flash-preview-04-17` |
+| `GEMINI_MODEL` | Gemini model name | `gemini-2.5-flash` |
 | `OPENAI_API_KEY` | OpenAI API key (fallback) | *(optional)* |
 | `OPENAI_MODEL` | OpenAI model name | `gpt-4o` |
 | `SEED_ADMIN_EMAIL` | Seed admin email | `admin@spaceflow.local` |

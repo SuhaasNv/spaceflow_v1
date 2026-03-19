@@ -24,7 +24,7 @@ export async function callAI(prompt: string): Promise<AiCallResult | null> {
       const { GoogleGenerativeAI } =
         (await import("@google/generative-ai")) as typeof import("@google/generative-ai");
       const genAI = new GoogleGenerativeAI(geminiKey);
-      const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-preview-04-17";
+      const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
       const model = genAI.getGenerativeModel({ model: modelName });
       const result = await model.generateContent(prompt);
       const text = result.response.text().trim();

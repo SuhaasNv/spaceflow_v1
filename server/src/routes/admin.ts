@@ -398,7 +398,7 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
       ? "openai"
       : "none",
     model: process.env.GEMINI_API_KEY
-      ? (process.env.GEMINI_MODEL ?? "gemini-2.5-flash-preview-04-17")
+      ? (process.env.GEMINI_MODEL ?? "gemini-2.5-flash")
       : process.env.OPENAI_API_KEY
       ? (process.env.OPENAI_MODEL ?? "gpt-4o")
       : "none",
@@ -411,7 +411,7 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
         responseTokens: geminiStats._sum.responseTokens ?? 0,
         totalTokens: (geminiStats._sum.promptTokens ?? 0) + (geminiStats._sum.responseTokens ?? 0),
         estimatedCostUsd: Math.round((geminiIn + geminiOut) * 100) / 100,
-        model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash-preview-04-17",
+        model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
       },
       openai: {
         calls: finalOpenaiCalls,
