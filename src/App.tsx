@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useNavigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { setNavigateToLogin } from "@/lib/api";
@@ -40,6 +40,32 @@ const queryClient = new QueryClient({
   },
 });
 
+function TopLoadingBar() {
+  const location = useLocation();
+  const [barKey, setBarKey] = useState(0);
+
+  useEffect(() => {
+    setBarKey((k) => k + 1);
+  }, [location.pathname]);
+
+  return (
+    <motion.div
+      key={barKey}
+      className="fixed top-0 left-0 h-[2px] z-[9999] pointer-events-none rounded-r-full"
+      style={{
+        background: "linear-gradient(90deg, hsl(172,66%,45%) 0%, hsl(172,66%,65%) 100%)",
+        boxShadow: "0 0 8px hsl(172,66%,50%)",
+      }}
+      initial={{ width: "0%", opacity: 1 }}
+      animate={{ width: ["0%", "65%", "85%", "100%"], opacity: [1, 1, 1, 0] }}
+      transition={{
+        width: { duration: 0.9, times: [0, 0.35, 0.65, 1], ease: "easeOut" },
+        opacity: { duration: 0.25, delay: 0.85 },
+      }}
+    />
+  );
+}
+
 function AppRoutes() {
   const navigate = useNavigate();
   useEffect(() => {
@@ -47,7 +73,9 @@ function AppRoutes() {
   }, [navigate]);
 
   return (
-    <AnimatePresence mode="sync">
+    <>
+      <TopLoadingBar />
+      <AnimatePresence mode="sync">
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
@@ -103,6 +131,7 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>
+    </>
   );
 }
 
