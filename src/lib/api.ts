@@ -39,7 +39,8 @@ async function request<T>(
 
   if (res.status === 401) {
     if (skipAuthRedirect) {
-      throw new ApiError(401, "Not authenticated");
+      const data = await res.json().catch(() => ({}));
+      throw new ApiError(401, data.error ?? "Not authenticated", data.details);
     }
     const refreshed = await tryRefresh();
     if (refreshed) {
