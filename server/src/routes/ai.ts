@@ -529,7 +529,7 @@ Default duration is 1 hour if not specified. Morning = 09:00, afternoon = 14:00,
       if (minCapacity && minCapacity > 1) candidateSpaces = candidateSpaces.filter((s) => s.capacity >= minCapacity);
 
       // Prefer the AI-suggested space if it's free
-      let chosenSpace = preferredSpaceId
+      const chosenSpace = preferredSpaceId
         ? candidateSpaces.find((s) => s.id === preferredSpaceId) ?? candidateSpaces[0]
         : candidateSpaces[0];
 
