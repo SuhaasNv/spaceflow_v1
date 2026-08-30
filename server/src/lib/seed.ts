@@ -26,35 +26,48 @@ async function main() {
   console.log("🌱 Seeding database...");
 
   // ── Users ─────────────────────────────────────────────────────────────────
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? "admin@spaceflow.local";
-  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? "Admin@SpaceFlow1!";
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  const isProd = process.env.NODE_ENV === "production";
 
-  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
-    await prisma.user.create({
-      data: { name: "Admin", email: adminEmail, passwordHash, role: "ADMIN" },
-    });
-    console.log(`✅ Admin created: ${adminEmail} / ${adminPassword}`);
+  if (!adminEmail || !adminPassword) {
+    if (isProd) {
+      throw new Error(
+        "SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be set in production — refusing to seed with a hardcoded default admin."
+      );
+    }
+    console.warn("⚠️  SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD not set — skipping admin seed (dev only).");
   } else {
-    console.log(`ℹ️  Admin already exists: ${adminEmail}`);
+    const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+    if (!existingAdmin) {
+      const passwordHash = await bcrypt.hash(adminPassword, 12);
+      await prisma.user.create({
+        data: { name: "Admin", email: adminEmail, passwordHash, role: "ADMIN" },
+      });
+      console.log(`✅ Admin created: ${adminEmail}`); // never log the password, even in dev
+    } else {
+      console.log(`ℹ️  Admin already exists: ${adminEmail}`);
+    }
   }
 
-  const sampleUsers = [
-    { name: "Alice Johnson", email: "alice@spaceflow.local", role: "FACILITIES_MANAGER" as const },
-    { name: "Bob Smith",     email: "bob@spaceflow.local",   role: "EMPLOYEE" as const },
-    { name: "Carol Williams",email: "carol@spaceflow.local", role: "EMPLOYEE" as const },
-    { name: "David Lee",     email: "david@spaceflow.local", role: "EMPLOYEE" as const },
-    { name: "Eva Martinez",  email: "eva@spaceflow.local",   role: "EMPLOYEE" as const },
-  ];
+  // Sample users are dev/demo fixtures only — never create them in production.
+  if (!isProd) {
+    const sampleUsers = [
+      { name: "Alice Johnson", email: "alice@spaceflow.local", role: "FACILITIES_MANAGER" as const },
+      { name: "Bob Smith",     email: "bob@spaceflow.local",   role: "EMPLOYEE" as const },
+      { name: "Carol Williams",email: "carol@spaceflow.local", role: "EMPLOYEE" as const },
+      { name: "David Lee",     email: "david@spaceflow.local", role: "EMPLOYEE" as const },
+      { name: "Eva Martinez",  email: "eva@spaceflow.local",   role: "EMPLOYEE" as const },
+    ];
 
-  for (const u of sampleUsers) {
-    const exists = await prisma.user.findUnique({ where: { email: u.email } });
-    if (!exists) {
-      await prisma.user.create({
-        data: { ...u, passwordHash: await bcrypt.hash("Password@123", 12) },
-      });
-      console.log(`✅ User created: ${u.email}`);
+    for (const u of sampleUsers) {
+      const exists = await prisma.user.findUnique({ where: { email: u.email } });
+      if (!exists) {
+        await prisma.user.create({
+          data: { ...u, passwordHash: await bcrypt.hash("Password@123", 12) },
+        });
+        console.log(`✅ User created: ${u.email}`);
+      }
     }
   }
 

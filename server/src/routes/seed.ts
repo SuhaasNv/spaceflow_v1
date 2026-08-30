@@ -1,8 +1,26 @@
 import { Router, Request, Response } from "express";
 import { execSync } from "child_process";
 import path from "path";
+import { timingSafeEqual } from "crypto";
+import rateLimit from "express-rate-limit";
 
 const router = Router();
+
+const seedLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { error: "Too many seed attempts. Try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Constant-time string compare — avoids leaking token length/content via response timing. */
+export function safeTokenEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 /**
  * GET/POST /api/seed?token=xxx
@@ -17,7 +35,7 @@ const handleSeed = (req: Request, res: Response) => {
     res.status(503).json({ error: "Seed not configured", hint: "Add SEED_TOKEN to Railway variables" });
     return;
   }
-  if (!token || token !== expected) {
+  if (!token || !safeTokenEquals(token, expected)) {
     res.status(403).json({ error: "Invalid or missing token", hint: "Use ?token=YOUR_SEED_TOKEN" });
     return;
   }
@@ -37,7 +55,7 @@ const handleSeed = (req: Request, res: Response) => {
   }
 };
 
-router.get("/", handleSeed);
-router.post("/", handleSeed);
+router.get("/", seedLimiter, handleSeed);
+router.post("/", seedLimiter, handleSeed);
 
 export default router;

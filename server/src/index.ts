@@ -1,7 +1,12 @@
 import "dotenv/config";
+import "express-async-errors"; // must load before routers are created — patches Express to forward rejected async handlers to errorHandler
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import fs from "fs";
+import path from "path";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/auth.js";
 import spacesRoutes from "./routes/spaces.js";
@@ -25,12 +30,13 @@ const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:8080").repla
 app.set("trust proxy", process.env.NODE_ENV === "production" ? 2 : 1);
 
 // CORS — must be before other middleware
-// Allow FRONTEND_URL and any *.vercel.app (preview deployments)
+// Only FRONTEND_URL is trusted with credentials. Any *.vercel.app was too broad:
+// with credentials:true it let any Vercel-hosted app read authenticated responses cross-site.
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // same-origin or non-browser
-      if (origin === FRONTEND_URL || origin.endsWith(".vercel.app")) {
+      if (origin === FRONTEND_URL) {
         return cb(null, origin);
       }
       cb(null, false);
@@ -61,6 +67,16 @@ app.use("/api/ai", aiRoutes);
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// API docs — served from the openapi.yaml shipped alongside the compiled app.
+// Load lazily/defensively so a missing or malformed spec can't crash the server.
+try {
+  const openapiPath = path.join(__dirname, "../openapi.yaml");
+  const openapiDocument = yaml.load(fs.readFileSync(openapiPath, "utf8")) as Record<string, unknown>;
+  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+} catch (err) {
+  console.error("Failed to load OpenAPI spec — /api/docs will be unavailable:", err);
+}
 
 // Seed endpoint (before 404 so it's matched)
 app.use("/api/seed", seedRoutes);

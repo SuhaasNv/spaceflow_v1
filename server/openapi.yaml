@@ -1,0 +1,428 @@
+openapi: 3.0.3
+info:
+  title: SpaceFlow API
+  description: >
+    Workspace/room booking platform with AI-assisted recommendations.
+    Auth is via httpOnly cookies (accessToken + refreshToken) set on
+    login/signup; there is no bearer-token flow for browser clients.
+  version: "1.0.0"
+servers:
+  - url: /api
+tags:
+  - name: Auth
+  - name: Spaces
+  - name: Bookings
+  - name: Occupancy
+  - name: Analytics
+  - name: Admin
+  - name: AI
+  - name: Recommendations
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: accessToken
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [ADMIN, FACILITIES_MANAGER, EMPLOYEE] }
+    Space:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [MEETING_ROOM, DESK, PHONE_BOOTH, COLLABORATION_AREA, OFFICE] }
+        floor: { type: string, nullable: true }
+        building: { type: string, nullable: true }
+        capacity: { type: integer }
+        isActive: { type: boolean }
+    Booking:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        spaceId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        purpose: { type: string, nullable: true }
+        attendeeCount: { type: integer, nullable: true }
+        status: { type: string, enum: [ACTIVE, CANCELLED, COMPLETED] }
+    BookingCreate:
+      type: object
+      required: [spaceId, startTime, endTime]
+      properties:
+        spaceId: { type: string, format: uuid }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        purpose: { type: string, maxLength: 500 }
+        attendeeCount: { type: integer, minimum: 1, maximum: 10000 }
+  parameters:
+    idParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+security:
+  - cookieAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Auth]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  timestamp: { type: string, format: date-time }
+
+  /auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create an account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                email: { type: string, format: email }
+                password:
+                  type: string
+                  description: Min 8 chars; must include upper, lower, digit, and special character.
+      responses:
+        "201":
+          description: Account created; sets accessToken/refreshToken cookies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "400": { description: Validation failed, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "409": { description: Email already registered }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Sets accessToken/refreshToken cookies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { description: Invalid email or password }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+        "401": { description: Not authenticated }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate the refresh token and issue a new access token
+      security: []
+      responses:
+        "200": { description: New cookies set }
+        "401": { description: Invalid or expired refresh token }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out and revoke the refresh token
+      responses:
+        "200": { description: Cookies cleared }
+
+  /spaces:
+    get:
+      tags: [Spaces]
+      summary: List spaces
+      responses:
+        "200":
+          description: List of spaces
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spaces:
+                    type: array
+                    items: { $ref: "#/components/schemas/Space" }
+    post:
+      tags: [Spaces]
+      summary: Create a space (admin/facilities manager only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Space" }
+      responses:
+        "201": { description: Space created }
+        "403": { description: Requires ADMIN or FACILITIES_MANAGER role }
+
+  /spaces/{id}:
+    get:
+      tags: [Spaces]
+      summary: Get a space by ID
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200": { description: Space }
+        "404": { description: Not found }
+    patch:
+      tags: [Spaces]
+      summary: Update a space (admin/facilities manager only)
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [Spaces]
+      summary: Delete a space (admin/facilities manager only)
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "204": { description: Deleted }
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      summary: List bookings (own, or all for admin/FM)
+      parameters:
+        - name: mine
+          in: query
+          schema: { type: boolean }
+        - name: status
+          in: query
+          schema: { type: string, enum: [ACTIVE, CANCELLED, COMPLETED] }
+        - name: spaceId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items: { $ref: "#/components/schemas/Booking" }
+    post:
+      tags: [Bookings]
+      summary: Create a booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BookingCreate" }
+      responses:
+        "201": { description: Booking created }
+        "409": { description: Space already booked for that window }
+
+  /bookings/availability:
+    get:
+      tags: [Bookings]
+      summary: Check whether a space is free for a given window
+      parameters:
+        - name: spaceId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+        - name: startTime
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+        - name: endTime
+          in: query
+          required: true
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Availability result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available: { type: boolean }
+                  conflictingBookings:
+                    type: array
+                    items: { $ref: "#/components/schemas/Booking" }
+
+  /bookings/{id}:
+    get:
+      tags: [Bookings]
+      summary: Get a booking by ID (owner or admin/FM)
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200": { description: Booking }
+        "403": { description: Access denied }
+        "404": { description: Not found }
+    patch:
+      tags: [Bookings]
+      summary: Update a booking (owner or admin/FM)
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200": { description: Updated }
+    delete:
+      tags: [Bookings]
+      summary: Cancel a booking (owner or admin/FM)
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200": { description: Cancelled }
+
+  /bookings/{id}/ics:
+    get:
+      tags: [Bookings]
+      summary: Download a booking as a .ics calendar file
+      parameters:
+        - $ref: "#/components/parameters/idParam"
+      responses:
+        "200":
+          description: iCalendar file
+          content:
+            text/calendar:
+              schema: { type: string }
+        "403": { description: Access denied }
+        "404": { description: Not found }
+
+  /occupancy/checkin:
+    post:
+      tags: [Occupancy]
+      summary: Check in to a booked space
+      responses:
+        "201": { description: Checked in }
+
+  /occupancy/checkout:
+    post:
+      tags: [Occupancy]
+      summary: Check out of a space
+      responses:
+        "200": { description: Checked out }
+
+  /occupancy/active:
+    get:
+      tags: [Occupancy]
+      summary: List currently active (checked-in) occupancy records
+      responses:
+        "200": { description: Active occupancy records }
+
+  /analytics/utilization:
+    get:
+      tags: [Analytics]
+      summary: Space utilization report (admin/FM only)
+      responses:
+        "200": { description: Utilization data }
+
+  /analytics/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Summary dashboard metrics
+      responses:
+        "200": { description: Dashboard data }
+
+  /ai/smart-booking:
+    post:
+      tags: [AI]
+      summary: Parse a natural-language booking request into a structured intent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "200": { description: Structured booking suggestion }
+        "429": { description: Rate limited (30 requests / 15 min) }
+
+  /ai/chat:
+    post:
+      tags: [AI]
+      summary: Conversational assistant for booking-related questions
+      responses:
+        "200": { description: Assistant response }
+        "429": { description: Rate limited (30 requests / 15 min) }
+
+  /recommendations:
+    get:
+      tags: [Recommendations]
+      summary: AI-generated space/utilization recommendations (admin/FM only)
+      parameters:
+        - name: scope
+          in: query
+          schema: { type: string, enum: [all, building, floor] }
+        - name: timeRange
+          in: query
+          schema: { type: string, enum: ["7d", "14d", "30d", "90d"] }
+        - name: focus
+          in: query
+          schema: { type: string, enum: [utilization, comfort, cost, sustainability] }
+      responses:
+        "200": { description: List of recommendations }
+        "429": { description: Rate limited (30 requests / 15 min) }

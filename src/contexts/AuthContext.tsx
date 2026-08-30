@@ -53,19 +53,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadUser]);
 
   const login = async (email: string, password: string) => {
-    const data = await api.post<{ user: User }>("/api/auth/login", {
-      email,
-      password,
-    });
+    // skipAuthRedirect: a failed login is not an expired session — without this,
+    // the shared 401 handler in api.ts swallows the real "Invalid email or
+    // password" message and replaces it with "Session expired".
+    const data = await api.post<{ user: User }>(
+      "/api/auth/login",
+      { email, password },
+      { skipAuthRedirect: true }
+    );
     setUser(data.user);
   };
 
   const signup = async (name: string, email: string, password: string) => {
-    const data = await api.post<{ user: User }>("/api/auth/signup", {
-      name,
-      email,
-      password,
-    });
+    const data = await api.post<{ user: User }>(
+      "/api/auth/signup",
+      { name, email, password },
+      { skipAuthRedirect: true }
+    );
     setUser(data.user);
   };
 

@@ -1,11 +1,23 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { BookingStatus, Role, Prisma } from "@prisma/client";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
 import { authenticate, requireAdminOrFM, AuthRequest } from "../middleware/auth.js";
 import { callAI, stripJsonFences } from "../lib/aiClient.js";
 
 const router = Router();
+
+// These routes call paid external LLM APIs (Gemini/OpenAI) — cap per-user request rate
+// so a single account can't run up provider billing.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: "Too many AI requests. Try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.use(aiLimiter);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/ai/smart-booking
@@ -517,7 +529,7 @@ Default duration is 1 hour if not specified. Morning = 09:00, afternoon = 14:00,
       if (minCapacity && minCapacity > 1) candidateSpaces = candidateSpaces.filter((s) => s.capacity >= minCapacity);
 
       // Prefer the AI-suggested space if it's free
-      let chosenSpace = preferredSpaceId
+      const chosenSpace = preferredSpaceId
         ? candidateSpaces.find((s) => s.id === preferredSpaceId) ?? candidateSpaces[0]
         : candidateSpaces[0];
 
