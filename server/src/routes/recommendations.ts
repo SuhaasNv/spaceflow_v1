@@ -1,11 +1,22 @@
 import { Router, Response } from "express";
 import { z } from "zod";
 import { BookingStatus } from "@prisma/client";
+import rateLimit from "express-rate-limit";
 import { prisma } from "../lib/prisma.js";
 import { authenticate, requireAdminOrFM, AuthRequest } from "../middleware/auth.js";
 import { callAI, stripJsonFences } from "../lib/aiClient.js";
 
 const router = Router();
+
+// Calls a paid external LLM API — cap request rate to bound provider billing.
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: { error: "Too many AI requests. Try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.use(aiLimiter);
 
 const querySchema = z.object({
   scope: z.enum(["all", "building", "floor"]).default("all"),
