@@ -147,7 +147,7 @@ router.get("/:id", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  res.json({ booking: booking as typeof booking });
+  res.json({ booking });
 });
 
 // POST /api/bookings
