@@ -38,3 +38,67 @@ jobs:
       - run: npx prisma generate
       - run: npm test
       - run: npm run build
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: spaceflow
+          POSTGRES_PASSWORD: spaceflow
+          POSTGRES_DB: spaceflow
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U spaceflow"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://spaceflow:spaceflow@localhost:5432/spaceflow
+      JWT_SECRET: ci-only-jwt-secret-not-for-production-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      JWT_REFRESH_SECRET: ci-only-jwt-refresh-secret-not-for-production-aaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      PORT: 4000
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:8080
+      SEED_ADMIN_EMAIL: admin@spaceflow.local
+      SEED_ADMIN_PASSWORD: Admin@SpaceFlow1!
+      VITE_API_URL: http://localhost:4000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install backend deps
+        working-directory: server
+        run: npm ci
+      - name: Prepare database
+        working-directory: server
+        run: |
+          npx prisma db push
+          npm run db:seed
+      - name: Start backend
+        working-directory: server
+        run: nohup npm run dev > backend.log 2>&1 &
+      - name: Start frontend
+        run: nohup npm run dev > frontend.log 2>&1 &
+      - name: Wait for backend and frontend
+        run: |
+          for i in $(seq 1 30); do curl -sf http://localhost:4000/api/health && break || sleep 2; done
+          for i in $(seq 1 30); do curl -sf http://localhost:8080 > /dev/null && break || sleep 2; done
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Show server logs on failure
+        if: failure()
+        run: |
+          echo "--- backend ---"; cat server/backend.log || true
+          echo "--- frontend ---"; cat frontend.log || true
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
