@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BookingStatus, Role, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
+import { buildBookingICS } from "../lib/ics.js";
 
 const router = Router();
 
@@ -148,6 +149,41 @@ router.get("/:id", authenticate, async (req: AuthRequest, res: Response) => {
   }
 
   res.json({ booking });
+});
+
+// GET /api/bookings/:id/ics — download a single booking as a .ics calendar file
+router.get("/:id/ics", authenticate, async (req: AuthRequest, res: Response) => {
+  const booking = await prisma.booking.findUnique({
+    where: { id: String(req.params["id"]) },
+    include: { space: { select: { name: true, floor: true, building: true } } },
+  });
+
+  if (!booking) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+
+  const isOwner = booking.userId === req.user!.userId;
+  const isAdmin = req.user!.role === Role.ADMIN || req.user!.role === Role.FACILITIES_MANAGER;
+
+  if (!isOwner && !isAdmin) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
+  const location = [booking.space.building, booking.space.floor].filter(Boolean).join(", ") || undefined;
+  const ics = buildBookingICS({
+    id: booking.id,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    purpose: booking.purpose,
+    spaceName: booking.space.name,
+    location,
+  });
+
+  res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="booking-${booking.id}.ics"`);
+  res.send(ics);
 });
 
 // POST /api/bookings
