@@ -30,4 +30,14 @@ describe("jwt", () => {
     const accessToken = signAccessToken({ userId: "user-4", role: "EMPLOYEE" });
     expect(() => verifyRefreshToken(accessToken)).toThrow();
   });
+
+  it("issues distinct refresh tokens for the same user signed back-to-back", () => {
+    // Regression: jwt.sign's `iat` has 1-second granularity, so without a
+    // unique jti, two refresh tokens for the same user in the same second
+    // were byte-identical — and RefreshToken.token is unique in the DB, so
+    // the second insert failed (hit via two concurrent logins in e2e tests).
+    const tokenA = signRefreshToken("user-5");
+    const tokenB = signRefreshToken("user-5");
+    expect(tokenA).not.toBe(tokenB);
+  });
 });

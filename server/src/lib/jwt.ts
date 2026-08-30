@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import { Role } from "@prisma/client";
 
 if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
@@ -27,7 +28,11 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 }
 
 export function signRefreshToken(userId: string): string {
-  return jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY });
+  // jwt.sign's `iat` has 1-second granularity, so two refresh tokens signed for
+  // the same user within the same second are byte-identical — and RefreshToken.token
+  // is unique in the DB, so the second insert fails. `jti` guarantees uniqueness
+  // regardless of timing (e.g. two concurrent logins for the same account).
+  return jwt.sign({ userId, jti: randomUUID() }, REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY });
 }
 
 export function verifyRefreshToken(token: string): { userId: string } {
