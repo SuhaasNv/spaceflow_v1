@@ -3,6 +3,10 @@ import "express-async-errors"; // must load before routers are created — patch
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import fs from "fs";
+import path from "path";
+import yaml from "js-yaml";
+import swaggerUi from "swagger-ui-express";
 
 import authRoutes from "./routes/auth.js";
 import spacesRoutes from "./routes/spaces.js";
@@ -63,6 +67,16 @@ app.use("/api/ai", aiRoutes);
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// API docs — served from the openapi.yaml shipped alongside the compiled app.
+// Load lazily/defensively so a missing or malformed spec can't crash the server.
+try {
+  const openapiPath = path.join(__dirname, "../openapi.yaml");
+  const openapiDocument = yaml.load(fs.readFileSync(openapiPath, "utf8")) as Record<string, unknown>;
+  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+} catch (err) {
+  console.error("Failed to load OpenAPI spec — /api/docs will be unavailable:", err);
+}
 
 // Seed endpoint (before 404 so it's matched)
 app.use("/api/seed", seedRoutes);

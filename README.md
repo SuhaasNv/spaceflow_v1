@@ -81,6 +81,10 @@
 
 ## Architecture
 
+> For the reasoning behind these decisions — including why this is a
+> monolith and not the 5-service Spring Boot version it started as — see
+> [CASE_STUDY.md](./CASE_STUDY.md).
+
 ### High-Level Overview
 
 ```mermaid
@@ -313,6 +317,9 @@ spaceflow_v1/
 ---
 
 ## API Overview
+
+Full interactive docs (Swagger UI) are served by the backend itself at
+`/api/docs` — e.g. `https://spaceflowv1-production.up.railway.app/api/docs`.
 
 | Prefix | Description |
 |--------|-------------|
