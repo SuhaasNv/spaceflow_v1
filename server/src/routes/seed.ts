@@ -15,7 +15,7 @@ const seedLimiter = rateLimit({
 });
 
 /** Constant-time string compare — avoids leaking token length/content via response timing. */
-function safeTokenEquals(a: string, b: string): boolean {
+export function safeTokenEquals(a: string, b: string): boolean {
   const bufA = Buffer.from(a);
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;

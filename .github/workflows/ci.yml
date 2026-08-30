@@ -22,7 +22,7 @@ jobs:
       - run: npm run build
 
   backend:
-    name: Backend (build)
+    name: Backend (test, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -36,4 +36,5 @@ jobs:
           cache-dependency-path: server/package-lock.json
       - run: npm ci
       - run: npx prisma generate
+      - run: npm test
       - run: npm run build
