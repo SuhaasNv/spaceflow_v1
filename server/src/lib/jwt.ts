@@ -1,8 +1,14 @@
 import jwt from "jsonwebtoken";
 import { Role } from "@prisma/client";
 
-const ACCESS_SECRET = process.env.JWT_SECRET!;
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET!;
+if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+  throw new Error(
+    "JWT_SECRET and JWT_REFRESH_SECRET must be set — refusing to start without them."
+  );
+}
+
+const ACCESS_SECRET = process.env.JWT_SECRET;
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const ACCESS_EXPIRY = "15m";
 const REFRESH_EXPIRY = "7d";
 const REFRESH_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "express-async-errors"; // must load before routers are created — patches Express to forward rejected async handlers to errorHandler
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -25,12 +26,13 @@ const FRONTEND_URL = (process.env.FRONTEND_URL ?? "http://localhost:8080").repla
 app.set("trust proxy", process.env.NODE_ENV === "production" ? 2 : 1);
 
 // CORS — must be before other middleware
-// Allow FRONTEND_URL and any *.vercel.app (preview deployments)
+// Only FRONTEND_URL is trusted with credentials. Any *.vercel.app was too broad:
+// with credentials:true it let any Vercel-hosted app read authenticated responses cross-site.
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // same-origin or non-browser
-      if (origin === FRONTEND_URL || origin.endsWith(".vercel.app")) {
+      if (origin === FRONTEND_URL) {
         return cb(null, origin);
       }
       cb(null, false);
