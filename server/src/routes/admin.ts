@@ -281,6 +281,9 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
     : null;
   const baseWhere = providerFilter ? { provider: providerFilter } : {};
 
+  // Must match callAI()'s actual attempt order in lib/aiClient.ts: OpenAI first, Gemini fallback.
+  const PRIMARY_IS_OPENAI = !!process.env.OPENAI_API_KEY;
+
   const [
     totalCalls,
     callsThisWeek,
@@ -334,25 +337,19 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
       where: baseWhere,
       _count: { _all: true },
     }),
-    // Per-provider stats: attribute legacy (provider=null or "") to whichever is primary
+    // Per-provider stats: attribute legacy (provider=null or "") to whichever is primary.
+    // Must match callAI()'s actual attempt order in lib/aiClient.ts: OpenAI first, Gemini fallback.
     prisma.aiRecommendationLog.aggregate({
-      where: (() => {
-        const hasGemini = !!process.env.GEMINI_API_KEY;
-        const hasOpenai = !!process.env.OPENAI_API_KEY;
-        if (hasGemini) return { OR: [{ provider: "gemini" }, { provider: null }, { provider: "" }] };
-        if (hasOpenai) return { provider: "gemini" };
-        return { OR: [{ provider: "gemini" }, { provider: null }, { provider: "" }] }; // neither set: legacy → Gemini
-      })(),
+      where: PRIMARY_IS_OPENAI
+        ? { provider: "gemini" }
+        : { OR: [{ provider: "gemini" }, { provider: null }, { provider: "" }] },
       _count: { id: true },
       _sum: { promptTokens: true, responseTokens: true },
     }),
     prisma.aiRecommendationLog.aggregate({
-      where: (() => {
-        const hasGemini = !!process.env.GEMINI_API_KEY;
-        const hasOpenai = !!process.env.OPENAI_API_KEY;
-        if (hasOpenai && !hasGemini) return { OR: [{ provider: "openai" }, { provider: null }, { provider: "" }] };
-        return { provider: "openai" };
-      })(),
+      where: PRIMARY_IS_OPENAI
+        ? { OR: [{ provider: "openai" }, { provider: null }, { provider: "" }] }
+        : { provider: "openai" },
       _count: { id: true },
       _sum: { promptTokens: true, responseTokens: true },
     }),
@@ -365,9 +362,8 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
   const geminiCalls = geminiStats._count.id;
   const openaiCalls = openaiStats._count.id;
   const orphanCalls = Math.max(0, totalCalls - geminiCalls - openaiCalls);
-  const primaryIsGemini = !!process.env.GEMINI_API_KEY || (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY);
-  const finalGeminiCalls = geminiCalls + (orphanCalls > 0 && primaryIsGemini ? orphanCalls : 0);
-  const finalOpenaiCalls = openaiCalls + (orphanCalls > 0 && !primaryIsGemini ? orphanCalls : 0);
+  const finalGeminiCalls = geminiCalls + (orphanCalls > 0 && !PRIMARY_IS_OPENAI ? orphanCalls : 0);
+  const finalOpenaiCalls = openaiCalls + (orphanCalls > 0 && PRIMARY_IS_OPENAI ? orphanCalls : 0);
 
   // Cost: Gemini 2.5 Flash $0.15/1M in, $0.60/1M out; GPT-4o $2.50/1M in, $10/1M out
   const geminiIn = (geminiStats._sum.promptTokens ?? 0) / 1_000_000 * 0.15;
@@ -392,15 +388,15 @@ router.get("/ai-stats", async (req: AuthRequest, res: Response) => {
     minLatencyMs: latencyStats._min.latencyMs ?? 0,
     maxLatencyMs: latencyStats._max.latencyMs ?? 0,
     estimatedCostUsd: Math.round(estimatedCostUsd * 100) / 100,
-    configuredProvider: process.env.GEMINI_API_KEY
-      ? "gemini"
-      : process.env.OPENAI_API_KEY
+    configuredProvider: PRIMARY_IS_OPENAI
       ? "openai"
+      : process.env.GEMINI_API_KEY
+      ? "gemini"
       : "none",
-    model: process.env.GEMINI_API_KEY
-      ? (process.env.GEMINI_MODEL ?? "gemini-2.5-flash")
-      : process.env.OPENAI_API_KEY
+    model: PRIMARY_IS_OPENAI
       ? (process.env.OPENAI_MODEL ?? "gpt-4o")
+      : process.env.GEMINI_API_KEY
+      ? (process.env.GEMINI_MODEL ?? "gemini-2.5-flash")
       : "none",
     recentCalls,
     callsByScope,

@@ -108,7 +108,7 @@ flowchart TB
 
     subgraph Data["Data & AI"]
         DB[(PostgreSQL<br/>Docker / Supabase<br/>Port 5432)]
-        AI["AI (optional)<br/>Gemini 2.5 Flash → OpenAI GPT-4o<br/>Rule-based fallback"]
+        AI["AI (optional)<br/>OpenAI GPT-4o → Gemini 2.5 Flash<br/>Rule-based fallback"]
     end
 
     Demo --> Frontend
@@ -192,7 +192,7 @@ sequenceDiagram
 | **Frontend** | Vite, React 18, TypeScript, Tailwind CSS, shadcn/ui, Framer Motion, TanStack Query, React Router |
 | **Backend** | Node.js, Express, Prisma ORM |
 | **Database** | PostgreSQL 16 |
-| **AI** | Google Gemini 2.5 Flash (primary), OpenAI GPT-4o (fallback) |
+| **AI** | OpenAI GPT-4o (primary), Google Gemini 2.5 Flash (fallback) |
 | **Auth** | JWT, bcrypt, httpOnly cookies |
 
 ---
@@ -261,9 +261,9 @@ npm run dev            # Starts on http://localhost:8080
 | `JWT_REFRESH_SECRET` | Refresh token signing secret | *(required)* |
 | `PORT` | API server port | `4000` |
 | `FRONTEND_URL` | CORS origin | `http://localhost:8080` |
-| `GEMINI_API_KEY` | Google AI API key | *(optional)* |
+| `GEMINI_API_KEY` | Google AI API key (fallback) | *(optional)* |
 | `GEMINI_MODEL` | Gemini model name | `gemini-2.5-flash` |
-| `OPENAI_API_KEY` | OpenAI API key (fallback) | *(optional)* |
+| `OPENAI_API_KEY` | OpenAI API key | *(optional)* |
 | `OPENAI_MODEL` | OpenAI model name | `gpt-4o` |
 | `SEED_ADMIN_EMAIL` | Seed admin email | `admin@spaceflow.local` |
 | `SEED_ADMIN_PASSWORD` | Seed admin password | `Admin@SpaceFlow1!` |

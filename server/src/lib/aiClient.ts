@@ -1,6 +1,6 @@
 /**
  * Shared AI client for SpaceFlow.
- * Provider chain: Gemini 2.5 Flash → OpenAI GPT-4o → null (caller uses rule-based fallback)
+ * Provider chain: OpenAI GPT-4o → Gemini 2.5 Flash → null (caller uses rule-based fallback)
  *
  * Usage:
  *   const result = await callAI(prompt);
@@ -17,32 +17,7 @@ export interface AiCallResult {
 }
 
 export async function callAI(prompt: string): Promise<AiCallResult | null> {
-  // ── Attempt 1: Gemini ─────────────────────────────────────────────────────
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
-    try {
-      const { GoogleGenerativeAI } =
-        (await import("@google/generative-ai")) as typeof import("@google/generative-ai");
-      const genAI = new GoogleGenerativeAI(geminiKey);
-      const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
-      const usage = result.response.usageMetadata;
-      return {
-        text,
-        provider: "gemini",
-        model: modelName,
-        promptTokens: usage?.promptTokenCount,
-        responseTokens: usage?.candidatesTokenCount,
-        totalTokens: usage?.totalTokenCount,
-      };
-    } catch (err) {
-      console.warn("[AI] Gemini failed, trying OpenAI fallback:", (err as Error).message);
-    }
-  }
-
-  // ── Attempt 2: OpenAI GPT-4o-mini ────────────────────────────────────────
+  // ── Attempt 1: OpenAI ─────────────────────────────────────────────────────
   const openaiKey = process.env.OPENAI_API_KEY;
   if (openaiKey) {
     try {
@@ -65,7 +40,32 @@ export async function callAI(prompt: string): Promise<AiCallResult | null> {
         totalTokens: usage?.total_tokens,
       };
     } catch (err) {
-      console.warn("[AI] OpenAI fallback also failed:", (err as Error).message);
+      console.warn("[AI] OpenAI failed, trying Gemini fallback:", (err as Error).message);
+    }
+  }
+
+  // ── Attempt 2: Gemini 2.5 Flash ──────────────────────────────────────────
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const { GoogleGenerativeAI } =
+        (await import("@google/generative-ai")) as typeof import("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(geminiKey);
+      const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const usage = result.response.usageMetadata;
+      return {
+        text,
+        provider: "gemini",
+        model: modelName,
+        promptTokens: usage?.promptTokenCount,
+        responseTokens: usage?.candidatesTokenCount,
+        totalTokens: usage?.totalTokenCount,
+      };
+    } catch (err) {
+      console.warn("[AI] Gemini fallback also failed:", (err as Error).message);
     }
   }
 
