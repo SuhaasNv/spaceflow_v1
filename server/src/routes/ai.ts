@@ -233,6 +233,23 @@ OUTPUT (JSON only, no markdown):
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Detect booking intent purely from keywords (fallback when AI unavailable) */
+/**
+ * Convert a "YYYY-MM-DD" + "HH:MM" wall-clock time in the given timezone to the UTC
+ * instant it represents. `offsetMinutes` follows Date#getTimezoneOffset() convention
+ * (UTC minus local, in minutes — e.g. -480 for UTC+8). Returns an Invalid Date if the
+ * input can't be parsed, so callers can keep using isNaN(result.getTime()) to check.
+ */
+export function wallClockToUtc(dateStr: string, timeStr: string, offsetMinutes: number): Date {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeStr);
+  if (!dateMatch || !timeMatch) return new Date(NaN);
+
+  const [, year, month, day] = dateMatch;
+  const [, hour, minute] = timeMatch;
+  const naiveUtcMs = Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+  return new Date(naiveUtcMs + offsetMinutes * 60_000);
+}
+
 function detectBookingKeywords(msg: string): boolean {
   const lower = msg.toLowerCase();
   const bookWords = ["book", "reserve", "schedule", "need a room", "find me a", "get me a", "grab a", "want a"];
@@ -306,6 +323,9 @@ router.post("/chat", authenticate, async (req: AuthRequest, res: Response) => {
       .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
       .max(20)
       .default([]),
+    // JS Date#getTimezoneOffset() convention: UTC minus local, in minutes. Defaults to 0 (UTC)
+    // for older/other callers — matches this server's own ambient timezone, so unset is a no-op.
+    timezoneOffsetMinutes: z.number().int().min(-720).max(840).default(0),
   });
 
   const parse = bodySchema.safeParse(req.body);
@@ -314,7 +334,7 @@ router.post("/chat", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const { message, history } = parse.data;
+  const { message, history, timezoneOffsetMinutes } = parse.data;
   const userRole = req.user!.role;
   const userId = req.user!.userId;
   const now = new Date();
@@ -489,11 +509,13 @@ Default duration is 1 hour if not specified. Morning = 09:00, afternoon = 14:00,
     try {
       const { date, startTime, endTime, spaceType, minCapacity, purpose, preferredSpaceId } = bookingParams as ParsedBooking & { preferredSpaceId?: string };
 
-      // Validate and build date objects
-      const startISO = `${date}T${startTime}:00`;
-      const endISO = `${date}T${endTime}:00`;
-      const start = new Date(startISO);
-      const end = new Date(endISO);
+      // Build date objects treating date+time as wall-clock time in the caller's timezone
+      // (not this server's — Railway runs in UTC, so `new Date("...T12:30:00")` used to be
+      // parsed as 12:30 UTC regardless of who was actually asking, then displayed back to
+      // them in their own browser's local time: two different zones, same instant, different
+      // numbers on screen).
+      const start = wallClockToUtc(date, startTime, timezoneOffsetMinutes);
+      const end = wallClockToUtc(date, endTime, timezoneOffsetMinutes);
 
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
         res.json({

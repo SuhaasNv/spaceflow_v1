@@ -159,7 +159,14 @@ export function AIChatWidget() {
         provider?: string;
         tokenUsage?: TokenUsage;
         bookingConfirmation?: BookingConfirmation;
-      }>("/api/ai/chat", { message: text.trim(), history });
+      }>("/api/ai/chat", {
+        message: text.trim(),
+        history,
+        // getTimezoneOffset() = UTC minus local, in minutes (e.g. -480 for UTC+8).
+        // Lets the server turn "12:30" into the right UTC instant for *your* clock,
+        // instead of assuming its own (the backend runs in UTC on Railway).
+        timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+      });
 
       const assistantMsg: Message = {
         id: crypto.randomUUID(),
