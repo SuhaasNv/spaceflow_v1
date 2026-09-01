@@ -102,6 +102,25 @@ router.patch("/users/:id", async (req: AuthRequest, res: Response) => {
   }
 
   const body = updateUserSchema.parse(req.body);
+
+  // Block deactivating OR demoting the last active admin — self or otherwise. Without this,
+  // an admin could demote themselves away from ADMIN (self-deactivation was already blocked,
+  // but role changes weren't) and lock everyone out of the admin panel with no way back in
+  // short of editing the database directly.
+  const removingAdminAccess =
+    user.role === Role.ADMIN &&
+    user.isActive &&
+    ((body.role !== undefined && body.role !== Role.ADMIN) || body.isActive === false);
+  if (removingAdminAccess) {
+    const otherActiveAdmins = await prisma.user.count({
+      where: { role: Role.ADMIN, isActive: true, id: { not: id } },
+    });
+    if (otherActiveAdmins === 0) {
+      res.status(400).json({ error: "Cannot remove admin access — this is the only active admin account" });
+      return;
+    }
+  }
+
   const updated = await prisma.user.update({
     where: { id },
     data: body,
@@ -123,6 +142,16 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response) => {
   if (!user) {
     res.status(404).json({ error: "User not found" });
     return;
+  }
+
+  if (user.role === Role.ADMIN && user.isActive) {
+    const otherActiveAdmins = await prisma.user.count({
+      where: { role: Role.ADMIN, isActive: true, id: { not: id } },
+    });
+    if (otherActiveAdmins === 0) {
+      res.status(400).json({ error: "Cannot delete the only active admin account" });
+      return;
+    }
   }
 
   await prisma.$transaction(async (tx) => {
