@@ -1,14 +1,18 @@
 import { Router, Response } from "express";
 import { z } from "zod";
-import { OccupancySource, Role } from "@prisma/client";
+import { OccupancySource, Role, BookingStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { authenticate, AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
+// Must match isWithinCheckInWindow() in src/pages/CheckIn.tsx.
+const CHECKIN_EARLY_MS = 15 * 60 * 1000;
+const CHECKIN_LATE_MS = 60 * 60 * 1000;
+
 const checkInSchema = z.object({
   spaceId: z.string().uuid(),
-  bookingId: z.string().uuid().optional(),
+  bookingId: z.string().uuid(),
   source: z.nativeEnum(OccupancySource).default("MANUAL"),
 });
 
@@ -53,6 +57,31 @@ router.post("/checkin", authenticate, async (req: AuthRequest, res: Response) =>
   const space = await prisma.space.findUnique({ where: { id: body.spaceId } });
   if (!space || !space.isActive) {
     res.status(404).json({ error: "Space not found" });
+    return;
+  }
+
+  // The frontend only ever offers check-in for the caller's own ACTIVE booking of this
+  // space, within a 15-min-early/60-min-late window — but that's UI-only. Enforce the
+  // same rules server-side so POSTing directly can't check in to an arbitrary space/time
+  // or on someone else's booking.
+  const isAdminOrFM = req.user!.role === Role.ADMIN || req.user!.role === Role.FACILITIES_MANAGER;
+  const booking = await prisma.booking.findUnique({ where: { id: body.bookingId } });
+
+  if (!booking || booking.spaceId !== body.spaceId) {
+    res.status(404).json({ error: "Booking not found for this space" });
+    return;
+  }
+  if (booking.userId !== req.user!.userId && !isAdminOrFM) {
+    res.status(403).json({ error: "This booking belongs to a different account" });
+    return;
+  }
+  if (booking.status !== BookingStatus.ACTIVE) {
+    res.status(400).json({ error: "This booking is not active" });
+    return;
+  }
+  const msUntilStart = new Date(booking.startTime).getTime() - Date.now();
+  if (msUntilStart > CHECKIN_EARLY_MS || msUntilStart < -CHECKIN_LATE_MS) {
+    res.status(400).json({ error: "Outside the check-in window for this booking" });
     return;
   }
 
