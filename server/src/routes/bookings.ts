@@ -209,6 +209,13 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  if (body.attendeeCount && body.attendeeCount > space.capacity) {
+    res.status(400).json({
+      error: `attendeeCount (${body.attendeeCount}) exceeds this space's capacity (${space.capacity})`,
+    });
+    return;
+  }
+
   // ── Atomic conflict-check + insert ─────────────────────────────────────
   // Serializable isolation ensures two concurrent requests cannot both
   // pass the conflict check and create a double-booking.
@@ -272,7 +279,7 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
 // PATCH /api/bookings/:id
 router.patch("/:id", authenticate, async (req: AuthRequest, res: Response) => {
   const id = String(req.params["id"]);
-  const booking = await prisma.booking.findUnique({ where: { id } });
+  const booking = await prisma.booking.findUnique({ where: { id }, include: { space: true } });
 
   if (!booking) {
     res.status(404).json({ error: "Booking not found" });
@@ -288,6 +295,22 @@ router.patch("/:id", authenticate, async (req: AuthRequest, res: Response) => {
   }
 
   const body = updateBookingSchema.parse(req.body);
+
+  // Direct status edits (e.g. un-cancelling, forcing COMPLETED) bypass the cancellation-reason
+  // tracking and conflict re-check that DELETE (cancel) does — restrict to admin/FM. The
+  // frontend never sends `status` here at all; cancellation always goes through DELETE.
+  if (body.status !== undefined && !isAdmin) {
+    res.status(403).json({ error: "Only an admin or facilities manager can change booking status this way" });
+    return;
+  }
+
+  if (body.attendeeCount && body.attendeeCount > booking.space.capacity) {
+    res.status(400).json({
+      error: `attendeeCount (${body.attendeeCount}) exceeds this space's capacity (${booking.space.capacity})`,
+    });
+    return;
+  }
+
   const updated = await prisma.booking.update({
     where: { id },
     data: body,
